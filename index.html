@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ready steady bang.</title>
+<meta name="description" content="Quick-draw cowboy duels — a fan-made homage to Ready Steady Bang (2011).">
+<meta name="theme-color" content="#f4f3f0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="bang!">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='18' r='9' fill='%231c1c1c'/%3E%3Cellipse cx='16' cy='9' rx='13' ry='2.5' fill='%231c1c1c'/%3E%3Crect x='10' y='2' width='12' height='8' rx='3' fill='%231c1c1c'/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="frame">
+
+<!-- TITLE -->
+<section class="screen active" id="screen-title">
+  <div class="title-art">
+    <canvas id="title-canvas" aria-hidden="true"></canvas>
+  </div>
+  <h1>ready<br>steady<br>bang.</h1>
+  <nav class="menu">
+    <button id="btn-1p">one player</button>
+    <button id="btn-2p">two player</button>
+    <button id="btn-gallery">kill gallery</button>
+    <button id="btn-stats">stats</button>
+    <button id="btn-mute" class="minor">SOUND: ON</button>
+  </nav>
+  <p class="fineprint">a fan-made homage to the 2011 game by chambers judd / animade.<br>for personal use only.</p>
+</section>
+
+<!-- OPPONENT SELECT -->
+<section class="screen" id="screen-select">
+  <header><button data-back="screen-title" class="back">‹ back</button><h2>pick your fight.</h2></header>
+  <p class="hint">beat an outlaw five times to take his gun. he only gets faster.</p>
+  <div id="opponent-list"></div>
+</section>
+
+<!-- 2P SETUP -->
+<section class="screen" id="screen-2p">
+  <header><button data-back="screen-title" class="back">‹ back</button><h2>two player.</h2></header>
+  <p class="hint">lay the device flat between you.<br>player 1 takes the left half, player 2 the right.<br>on a keyboard: <b>A</b> vs <b>L</b>.<br>draw only on <i>bang!</i> — draw early and you lose the duel.</p>
+  <nav class="menu">
+    <button data-bestof="1">single duel</button>
+    <button data-bestof="3">best of three</button>
+    <button data-bestof="5">best of five</button>
+  </nav>
+</section>
+
+<!-- DUEL -->
+<section class="screen" id="screen-duel">
+  <canvas id="game-canvas"></canvas>
+  <div id="duel-zones"><div class="zone p1"><span>P1</span></div><div class="zone p2"><span>P2</span></div></div>
+  <div id="duel-score"></div>
+  <div id="duel-word"></div>
+  <div id="duel-word2" aria-hidden="true"></div>
+  <div id="duel-caption"></div>
+  <div id="duel-times"></div>
+  <button id="btn-quit-duel" class="back quit">‹ quit</button>
+</section>
+
+<!-- SERIES END -->
+<section class="screen" id="screen-end">
+  <h2 id="end-title"></h2>
+  <p id="end-sub" class="hint"></p>
+  <nav class="menu">
+    <button id="end-rematch"></button>
+    <button id="end-menu">main menu</button>
+  </nav>
+</section>
+
+<!-- KILL GALLERY -->
+<section class="screen" id="screen-gallery">
+  <header><button data-back="screen-title" class="back">‹ back</button><h2>kill gallery.</h2></header>
+  <p class="hint" id="gallery-count"></p>
+  <div id="gallery-grid"></div>
+</section>
+
+<!-- STATS -->
+<section class="screen" id="screen-stats">
+  <header><button data-back="screen-title" class="back">‹ back</button><h2>stats.</h2></header>
+  <div id="stats-body"></div>
+  <nav class="menu"><button id="btn-reset" class="minor">reset progress</button></nav>
+</section>
+
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
