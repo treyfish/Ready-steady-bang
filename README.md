@@ -19,6 +19,20 @@ python3 -m http.server 8000
 Works with mouse, touch, or keyboard (Space to draw in one-player; **A** vs
 **L** in two-player).
 
+## It's an installable web app
+
+The game ships as a PWA: a web app manifest, app icons, and an
+offline-first service worker that precaches everything. Serve it from any
+static host over HTTPS (GitHub Pages, Vercel, Netlify...) and:
+
+- on iPhone: Safari → Share → **Add to Home Screen**
+- on Android: Chrome → menu → **Install app**
+
+It then launches fullscreen in portrait with its own icon and works with
+no connection. A GitHub Pages workflow is included
+(`.github/workflows/pages.yml`) — enable Pages (Settings → Pages → Source:
+GitHub Actions) and every push deploys automatically.
+
 ## How it plays (faithful to the original)
 
 - A deadpan voice counts **ready… steady…** and then, after a *random* delay
