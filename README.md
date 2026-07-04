@@ -52,8 +52,18 @@ js/audio.js     Web Audio synthesized SFX + speech-synthesis announcer
 
 ## Deliberate deviations from the original
 
-- Landscape side-view duel layout everywhere (the original ran portrait with
-  mirrored top/bottom cowboys on iPhone); tap zones split left/right in 2P.
+- The game runs in a portrait frame like the original app (letterboxed to a
+  phone-shaped column on wide screens), with the original's mirrored duel
+  layout: your cowboy stands at the bottom, the opponent hangs reflected
+  from the top, each owning half the screen. In 2P the second player takes
+  the top half with an upside-down word display.
+- The 10 outlaws each have a distinct silhouette (build, hat, and signature
+  props — The Doc's spectacles, Bill's bottle, Thomas's hammer, Aberdeen
+  Bangus's massive iron, the Mystery Man's grey ghost figure...); these
+  designs are original, since no imagery of the real roster is documented.
+- Winners celebrate: a pistol-twirl re-holster after each round, and one of
+  five victory dances (hat-wave, gun-twirl, heel-click, jig, stage bow)
+  after taking a series — echoing the original's victory dance.
 - The 10 outlaws use the original's real roster, recovered from its
   achievement list (Sloe Jim, Arthur Rightus, The Doc, Van Queef, Aberdeen
   Bangus, Bill, Thomas, Chaps, Texas, The Mystery Man — each dropping his

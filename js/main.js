@@ -1,4 +1,4 @@
-import { TIMING, OPPONENTS, DEATHS, KILLS_TO_BEAT, OPPONENT_RAMP, RANK_TABLE } from './data.js';
+import { TIMING, OPPONENTS, DEATHS, DANCES, KILLS_TO_BEAT, OPPONENT_RAMP, RANK_TABLE } from './data.js';
 import { drawCowboy, defaultPose } from './cowboy.js';
 import { DEATH_ANIMS, drawProp } from './deaths.js';
 import * as audio from './audio.js';
@@ -64,9 +64,10 @@ function resize() {
 window.addEventListener('resize', resize);
 
 // The scene: two cowboys + fx, drawn each frame while a duel or replay runs.
-const freshSide = () => ({
+const freshSide = (look = null) => ({
   pose: defaultPose(), fx: [], death: null, deathStart: 0,
-  walk: null, dance: 0, fired: false, smoke: 0, hit: 0, seed: Math.random() * 7,
+  walk: null, dance: null, flourish: 0, afraid: 0, fired: false,
+  smoke: 0, hit: 0, look, seed: Math.random() * 7,
 });
 
 const scene = {
@@ -86,13 +87,17 @@ function resetScene() {
   scene.tension = false;
 }
 
+// The duel is portrait like the original: your cowboy stands at the
+// bottom of the screen, the opponent hangs mirrored from the top —
+// two reflected worlds, each player owning their half.
 function figureMetrics() {
-  // figure height scales with BOTH axes so narrow portrait screens
-  // don't push the two cowboys into each other
-  const h = Math.min(H * 0.34, W * 0.36, 190);
-  const groundY = H * 0.66;
-  const inset = Math.min(Math.max(W * 0.22, h * 0.9), W * 0.3);
-  return { h, groundY, lx: inset, rx: W - inset };
+  const h = Math.min(W * 0.42, H * 0.24, 200);
+  return {
+    h,
+    cx: W * 0.5,
+    botY: H * 0.875,   // bottom cowboy's ground line
+    topY: H * 0.125,   // top cowboy's (mirrored) ground line
+  };
 }
 
 // Puppet updater — works for any side object (duel scene or title diorama).
@@ -116,18 +121,45 @@ function updatePuppet(s, now, tension) {
     }
   } else if (!s.death && !s.dance) {
     // idle life: slow breathing, and during ready/steady the gun hand
-    // hovers over the holster with a nervous tremor
+    // hovers over the holster with a nervous tremor. Look quirks feed in:
+    // Sloe Jim slouches, Bill sways on his feet.
+    const slouch = (s.look && s.look.slouch) || 0;
+    const sway = s.look && s.look.sway ? Math.sin(now / 650 + s.seed) * 0.05 : 0;
     s.pose.breathe = (Math.sin(now / 900 + s.seed) + 1) * 1.1;
-    if (!s.fired) {
+    if (!s.fired && !s.flourish) {
       if (tension) {
         s.pose.armGun = 0.42 + Math.sin(now / 55 + s.seed) * 0.018;
-        s.pose.lean = 0.045;
+        s.pose.lean = 0.045 + slouch + sway;
         s.pose.kneel = 0.08;
       } else {
         s.pose.armGun = 0.55;
-        s.pose.lean = 0;
+        s.pose.lean = slouch + sway;
         s.pose.kneel = 0;
       }
+    }
+  }
+
+  // scared stiff: he shot his bolt and now trembles, waiting for it
+  if (s.afraid && now >= s.afraid && !s.death) {
+    s.pose.x = Math.sin(now / 24) * 1.6;
+    s.pose.kneel = 0.16;
+    s.pose.headTilt = Math.sin(now / 30) * 0.06;
+    s.pose.armGun = 0.7;
+  }
+
+  // round-win flourish: spin the pistol once and drop it back in leather
+  if (s.flourish && !s.dance) {
+    const t = (now - s.flourish) / 1000;
+    if (t < 0) {
+      // still savouring the moment
+    } else if (t < 1) {
+      s.pose.gunDrawn = true;
+      s.pose.armGun = -t * Math.PI * 2 * 1.5;      // one and a half showy turns
+    } else {
+      s.pose.armGun = 0.55;
+      s.pose.gunDrawn = false;
+      s.flourish = 0;
+      s.fired = false;
     }
   }
 
@@ -138,15 +170,54 @@ function updatePuppet(s, now, tension) {
     else s.hit = 0;
   }
 
-  // victory dance: hop, hat lifted high, gun waved overhead
+  // victory dances — the winner's little celebration, one of several
   if (s.dance) {
-    const t = (now - s.dance) / 1000;
-    s.pose.gunDrawn = true;
-    s.pose.y = -Math.abs(Math.sin(t * 7)) * 11;
-    s.pose.armGun = -1.15 + Math.sin(t * 14) * 0.3;
-    s.pose.rot = Math.sin(t * 7) * 0.05;
-    s.pose.hatY = -6 - Math.abs(Math.sin(t * 7)) * 9;   // hat rides up with each hop
-    s.pose.hatRot = Math.sin(t * 9) * 0.25;
+    const t = (now - s.dance.start) / 1000;
+    switch (s.dance.id) {
+      case 'gun-twirl': // pistol spun in flashy circles, then blown out & holstered
+        s.pose.gunDrawn = true;
+        if (t < 1.3) s.pose.armGun = -t * Math.PI * 2 * 2.3;
+        else if (t < 1.8) { s.pose.armGun = -0.9; }          // blow the smoke away
+        else { s.pose.armGun = 0.55; s.pose.gunDrawn = false; }
+        s.pose.y = -Math.abs(Math.sin(t * 5)) * 4;
+        break;
+      case 'heel-click': // two sideways heel-click jumps
+        {
+          const hop = Math.abs(Math.sin(t * 4.2));
+          s.pose.y = -hop * 24;
+          s.pose.footF = hop * 13;
+          s.pose.footB = -hop * 13;
+          s.pose.legSplit = 0.16 + hop * 0.12;
+          s.pose.rot = Math.sin(t * 4.2) * 0.09;
+          s.pose.armOff = 0.5 - hop * 1.2;
+        }
+        break;
+      case 'jig': // happy little tap-dance in place
+        s.pose.footF = Math.sin(t * 22) * 7;
+        s.pose.footB = -Math.sin(t * 22) * 7;
+        s.pose.y = -Math.abs(Math.sin(t * 22)) * 2.5;
+        s.pose.lean = Math.sin(t * 11) * 0.06;
+        s.pose.headTilt = Math.sin(t * 11 + 1) * 0.1;
+        break;
+      case 'bow': // sweeps the hat off into a deep stage bow
+        {
+          const down = Math.sin(Math.min(1, t / 0.8) * Math.PI); // bow and rise
+          s.pose.lean = 0.55 * down;
+          s.pose.armGun = 0.55 - 1.6 * down;
+          s.pose.hatY = down * 10;
+          s.pose.hatRot = down * 1.4;
+          s.pose.headTilt = 0.3 * down;
+          if (t > 1.6) { s.pose.lean = 0; }
+        }
+        break;
+      default: // 'hat-wave': hopping with the hat riding high
+        s.pose.gunDrawn = true;
+        s.pose.y = -Math.abs(Math.sin(t * 7)) * 11;
+        s.pose.armGun = -1.15 + Math.sin(t * 14) * 0.3;
+        s.pose.rot = Math.sin(t * 7) * 0.05;
+        s.pose.hatY = -6 - Math.abs(Math.sin(t * 7)) * 9;
+        s.pose.hatRot = Math.sin(t * 9) * 0.25;
+    }
   }
 
   // muzzle smoke drifting up after a shot
@@ -182,33 +253,53 @@ function render(now) {
     scene.shake *= 0.86;
   }
   const m = figureMetrics();
+  const sc = m.h / 100;
 
-  // ground line
   ctx.strokeStyle = '#1c1c1c';
   ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(W * 0.06, m.groundY + 1);
-  ctx.lineTo(W * 0.94, m.groundY + 1);
+  ctx.beginPath(); // your ground line, along the bottom
+  ctx.moveTo(W * 0.08, m.botY + 1);
+  ctx.lineTo(W * 0.92, m.botY + 1);
+  ctx.stroke();
+  ctx.beginPath(); // the mirrored world's ground line, along the top
+  ctx.moveTo(W * 0.08, m.topY - 1);
+  ctx.lineTo(W * 0.92, m.topY - 1);
   ctx.stroke();
 
   updatePuppet(scene.left, now, scene.tension);
   updatePuppet(scene.right, now, scene.tension);
 
-  for (const [side, x, facing] of [['left', m.lx, 1], ['right', m.rx, -1]]) {
-    const s = scene[side];
-    const sc = m.h / 100;
+  // bottom cowboy: you / player 1
+  {
+    const s = scene.left;
     if (s.pose.clipGround) {
       ctx.save();
-      ctx.beginPath(); ctx.rect(0, 0, W, m.groundY + 2); ctx.clip();
+      ctx.beginPath(); ctx.rect(0, 0, W, m.botY + 2); ctx.clip();
     }
-    drawCowboy(ctx, x, m.groundY, m.h, facing, s.pose);
-    // props live in the same local space as the figure
+    drawCowboy(ctx, m.cx, m.botY, m.h, 1, s.pose, s.look || {});
     ctx.save();
-    ctx.translate(x, m.groundY);
-    ctx.scale(facing * sc, sc);
+    ctx.translate(m.cx, m.botY);
+    ctx.scale(sc, sc);
     for (const p of s.fx) drawProp(ctx, p);
     ctx.restore();
     if (s.pose.clipGround) ctx.restore();
+  }
+
+  // top cowboy: opponent / player 2, reflected across the centre
+  {
+    const s = scene.right;
+    ctx.save();
+    if (s.pose.clipGround) {
+      ctx.beginPath(); ctx.rect(0, m.topY - 2, W, H); ctx.clip();
+    }
+    ctx.translate(m.cx, m.topY);
+    ctx.scale(1, -1);
+    drawCowboy(ctx, 0, 0, m.h, 1, s.pose, s.look || {});
+    ctx.save();
+    ctx.scale(sc, sc);
+    for (const p of s.fx) drawProp(ctx, p);
+    ctx.restore();
+    ctx.restore();
   }
 
   ctx.restore(); // shake
@@ -411,10 +502,11 @@ class Duel {
     this.shots = [null, null];
     this.newDeath = null;
     resetScene();
+    if (this.mode === '1p') scene.right.look = this.opp.look;
     if (first) {
-      // opponent walks in from offscreen
+      // both cowboys walk in from opposite wings
       scene.right.walk = { start: now, dur: 1100, from: 260 };
-      if (this.mode === '2p') scene.left.walk = { start: now, dur: 1100, from: -260 };
+      scene.left.walk = { start: now, dur: 1100, from: -260 };
     }
     setWord('');
     capEl.textContent = '';
@@ -500,12 +592,14 @@ class Duel {
   }
 
   falseStart(side, now) {
-    audio.ricochet();
+    audio.gunshot();                       // the wasted shot
+    setTimeout(() => audio.ricochet(), 140);
     scene.tension = false;
     scene.flash = 0.5;
     scene.shake = 0.6;
     const shooterSide = side === 0 ? 'left' : 'right';
     fireArm(scene[shooterSide], now);
+    scene[shooterSide].afraid = now + 480; // realises, and trembles
     if (side === 0) { save.falseStarts++; persist(); }
     setWord('');
     capEl.textContent = side === 0
@@ -546,6 +640,9 @@ class Duel {
           setTimeout(() => audio.thud(), DEATH_ANIMS[death.id].dur * 0.72);
         }, 120);
       }, TIMING.deathPause - 120);
+      // winner twirls his iron back into the holster
+      const winner = winnerSide === 0 ? scene.left : scene.right;
+      winner.flourish = performance.now() + 950;
       this.newDeath = death.isNew ? death : null;
       this.finishRound(winnerSide, falseStart);
     }, delay);
@@ -574,7 +671,7 @@ class Duel {
     }
     if (this.newDeath) {
       const d = DEATHS.find(x => x.id === this.newDeath.id);
-      capEl.textContent += `   ★ NEW KILL UNLOCKED: ${d.name.toUpperCase()}`;
+      capEl.textContent += `   ★ NEW KILL: ${d.name.toUpperCase()}`;
     }
     setWord('');
     this.phase = 'result';
@@ -590,9 +687,13 @@ class Duel {
       save.unlocked = Math.max(save.unlocked, Math.min(this.opp.id + 1, OPPONENTS.length));
       persist();
     }
-    // winner does a little victory dance before the curtain
+    // winner celebrates with one of the victory dances before the curtain
     const winnerSide = this.mode === '1p' || playerWon ? 'left' : 'right';
-    scene[winnerSide].dance = performance.now();
+    scene[winnerSide].flourish = 0;
+    scene[winnerSide].dance = {
+      start: performance.now(),
+      id: DANCES[Math.floor(Math.random() * DANCES.length)],
+    };
     capEl.textContent = '';
     timesEl.textContent = '';
     const d = this;
@@ -674,16 +775,9 @@ function duelPointer(e) {
   const rect = canvas.getBoundingClientRect();
   let side = 0;
   if (duel.mode === '2p') {
-    // landscape: P1 left / P2 right. Portrait (device flat between two
-    // players, like the original): P1 bottom / P2 top.
-    const portrait = rect.height > rect.width;
-    if (portrait) {
-      const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - rect.top;
-      side = y > rect.height / 2 ? 0 : 1;
-    } else {
-      const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - rect.left;
-      side = x < rect.width / 2 ? 0 : 1;
-    }
+    // device flat between two players, like the original: P1 bottom / P2 top
+    const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - rect.top;
+    side = y > rect.height / 2 ? 0 : 1;
   }
   duel.input(side, performance.now());
 }
@@ -703,6 +797,20 @@ window.addEventListener('keydown', e => {
 
 // --- Menus ----------------------------------------------------------------
 
+// small standing portrait of an outlaw, for the select list
+function facePortrait(look, faint) {
+  const c = document.createElement('canvas');
+  const dpr = 2;
+  c.width = 52 * dpr; c.height = 62 * dpr;
+  c.className = 'face';
+  const fc = c.getContext('2d');
+  fc.scale(dpr, dpr);
+  const pose = defaultPose();
+  const drawLook = faint ? { ...look, ink: '#d8d7d3', alpha: 1 } : look;
+  drawCowboy(fc, 26, 58, 46, 1, pose, drawLook);
+  return c;
+}
+
 function buildSelect() {
   const list = $('#opponent-list');
   list.innerHTML = '';
@@ -716,6 +824,8 @@ function buildSelect() {
         `<span class="tag">${save.beaten.includes(opp.id) ? 'BEATEN'
           : opp.id === OPPONENTS.length ? 'DRAW UNKNOWN'
           : `DRAWS IN ~${(opp.mean / 1000).toFixed(2)}s`}</span>`;
+    // silhouette portrait after the number (locked outlaws are a faint tease)
+    li.insertBefore(facePortrait(opp.look, locked), li.children[1]);
     if (!locked) li.onclick = () => { audio.tick(); startDuel1P(opp); };
     list.appendChild(li);
   }
@@ -741,7 +851,7 @@ function replayDeath(id) {
   $('#screen-duel').classList.remove('twop');
   duel = null;
   resetScene();
-  scene.left.pose.visible = false;
+  scene.right.pose.visible = false;  // stage to ourselves, right way up
   setWord('');
   scoreEl.innerHTML = '';
   timesEl.textContent = '';
@@ -751,8 +861,9 @@ function replayDeath(id) {
   setTimeout(() => {
     audio.gunshot();
     scene.flash = 0.35;
-    scene.right.death = id;
-    scene.right.deathStart = performance.now();
+    scene.left.death = id;
+    scene.left.deathStart = performance.now();
+    setTimeout(() => audio.thud(), DEATH_ANIMS[id].dur * 0.72);
     setTimeout(() => { stopLoop(); show('screen-gallery'); }, DEATH_ANIMS[id].dur + 1200);
   }, 700);
 }

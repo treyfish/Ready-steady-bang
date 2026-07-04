@@ -23,18 +23,34 @@ export const TIMING = {
 // Beat one and you take his trophy. Reaction means/spreads are tuned
 // estimates (the original's exact values were never published); each
 // outlaw also draws a touch faster with every standoff you win.
+// Each outlaw carries a distinct silhouette via `look`:
+// hat style, build (w/h), and signature props.
 export const OPPONENTS = [
-  { id: 1,  name: 'Sloe Jim',        trophy: 'his .22 revolver',           mean: 520, spread: 130 },
-  { id: 2,  name: 'Arthur Rightus',  trophy: 'his snubby',                 mean: 460, spread: 112 },
-  { id: 3,  name: 'The Doc',         trophy: 'his .44 magnum',             mean: 410, spread: 96  },
-  { id: 4,  name: 'Van Queef',       trophy: 'his .357 magnum',            mean: 365, spread: 82  },
-  { id: 5,  name: 'Aberdeen Bangus', trophy: 'his massive .500 magnum',    mean: 330, spread: 68  },
-  { id: 6,  name: 'Bill',            trophy: 'a bottle of his finest whiskey', mean: 298, spread: 56 },
-  { id: 7,  name: 'Thomas',          trophy: 'his hammer',                 mean: 268, spread: 46  },
-  { id: 8,  name: 'Chaps',           trophy: 'his copy of Cowboy Gossip',  mean: 240, spread: 36  },
-  { id: 9,  name: 'Texas',           trophy: 'his prized cowboy skull collection', mean: 214, spread: 27 },
-  { id: 10, name: 'The Mystery Man', trophy: 'the mystery prize',          mean: 188, spread: 18  },
+  { id: 1,  name: 'Sloe Jim',        trophy: 'his .22 revolver',           mean: 520, spread: 130,
+    look: { hat: 'droop', w: 0.88, h: 0.94, slouch: 0.09 } },
+  { id: 2,  name: 'Arthur Rightus',  trophy: 'his snubby',                 mean: 460, spread: 112,
+    look: { hat: 'flat', w: 0.86, h: 1.08 } },
+  { id: 3,  name: 'The Doc',         trophy: 'his .44 magnum',             mean: 410, spread: 96,
+    look: { hat: 'bowler', w: 0.95, h: 0.97, glasses: true } },
+  { id: 4,  name: 'Van Queef',       trophy: 'his .357 magnum',            mean: 365, spread: 82,
+    look: { hat: 'stetson', w: 1.02, h: 1.04, coat: true } },
+  { id: 5,  name: 'Aberdeen Bangus', trophy: 'his massive .500 magnum',    mean: 330, spread: 68,
+    look: { hat: 'stetson', w: 1.32, h: 0.96, gunScale: 1.7 } },
+  { id: 6,  name: 'Bill',            trophy: 'a bottle of his finest whiskey', mean: 298, spread: 56,
+    look: { hat: 'crumpled', w: 1.02, h: 0.98, bottle: true, sway: true } },
+  { id: 7,  name: 'Thomas',          trophy: 'his hammer',                 mean: 268, spread: 46,
+    look: { hat: 'bowler', w: 1.16, h: 1.02, hammer: true } },
+  { id: 8,  name: 'Chaps',           trophy: 'his copy of Cowboy Gossip',  mean: 240, spread: 36,
+    look: { hat: 'wide', w: 1.05, h: 0.99, chaps: true } },
+  { id: 9,  name: 'Texas',           trophy: 'his prized cowboy skull collection', mean: 214, spread: 27,
+    look: { hat: 'stetson', w: 1.1, h: 1.05, star: true, buckle: true, gunScale: 1.2 } },
+  { id: 10, name: 'The Mystery Man', trophy: 'the mystery prize',          mean: 188, spread: 18,
+    look: { hat: 'flat', w: 0.98, h: 1.06, ink: '#8f8e8a', alpha: 0.92 } },
 ];
+
+// Victory dances — the winner celebrates with one of these after taking
+// a series (the original's "victory dance").
+export const DANCES = ['hat-wave', 'gun-twirl', 'heel-click', 'jig', 'bow'];
 
 // Beat an outlaw by winning this many standoffs against him (losses don't
 // reset your tally — you just square up again).

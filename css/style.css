@@ -21,6 +21,20 @@ html, body {
   touch-action: manipulation;
 }
 
+/* the whole game lives in a portrait frame, like the original app;
+   on wide screens it letterboxes to a centred phone-shaped column */
+body { display: flex; align-items: center; justify-content: center; }
+#frame {
+  position: relative;
+  width: min(100vw, calc(100vh * 0.62));
+  height: min(100vh, calc(100vw / 0.62));
+  overflow: hidden;
+  container-type: size;
+}
+@media (min-aspect-ratio: 0.62) {
+  #frame { border-left: 1px solid var(--faint); border-right: 1px solid var(--faint); }
+}
+
 .screen {
   position: absolute;
   inset: 0;
@@ -38,15 +52,16 @@ html, body {
 
 h1 {
   font-weight: 300;
-  font-size: clamp(2.2rem, min(7vw, 9vh), 4.2rem);
+  font-size: clamp(2.2rem, min(13cqw, 9cqh), 4.2rem);
   line-height: 1.02;
   letter-spacing: 0.04em;
 }
 
-h2 { font-weight: 300; font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: 0.05em; }
+h2 { font-weight: 300; font-size: clamp(1.6rem, 9cqw, 2.6rem); letter-spacing: 0.05em; }
 
+.title-art { width: 100%; display: flex; justify-content: center; }
 .title-art canvas {
-  width: min(72vw, 380px);
+  width: min(86%, 380px);
   height: clamp(90px, 16vh, 130px);
   display: block;
 }
@@ -85,8 +100,9 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 22px;
+  padding: 20px 64px;
 }
+header h2 { font-size: clamp(1.3rem, 7cqw, 2rem); }
 .back {
   position: absolute;
   left: 12px;
@@ -102,24 +118,25 @@ header {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: min(92vw, 460px);
+  width: min(94%, 460px);
   max-height: 62vh;
   overflow-y: auto;
 }
 .opponent {
   display: grid;
-  grid-template-columns: 2.2rem 1fr auto;
+  grid-template-columns: 1.6rem 52px 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 8px 12px;
   border-top: 1px solid var(--faint);
   text-align: left;
   letter-spacing: 0.1em;
 }
+.opponent .face { width: 52px; height: 62px; }
 .opponent:last-child { border-bottom: 1px solid var(--faint); }
-.opponent .num { color: var(--grey); font-size: 0.9rem; }
-.opponent .name { font-size: 1.05rem; }
-.opponent .tag { font-size: 0.65rem; color: var(--grey); letter-spacing: 0.18em; }
+.opponent .num { color: var(--grey); font-size: 0.85rem; }
+.opponent .name { font-size: 0.85rem; letter-spacing: 0.07em; white-space: nowrap; }
+.opponent .tag { font-size: 0.58rem; color: var(--grey); letter-spacing: 0.14em; white-space: nowrap; }
 .opponent.locked { opacity: 0.35; cursor: default; }
 .opponent.locked:hover { transform: none; }
 .opponent.beaten .name { text-decoration: line-through; text-decoration-thickness: 1px; }
@@ -131,22 +148,23 @@ header {
 
 #duel-score {
   position: absolute;
-  top: 20px; left: 0; right: 0;
+  bottom: 10px; left: 0; right: 0;
   display: flex;
   justify-content: center;
-  gap: 18px;
-  font-size: 0.78rem;
-  letter-spacing: 0.22em;
+  gap: 14px;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
   color: var(--grey);
 }
 #duel-score .vs { color: var(--faint); }
 
+/* words live in the free band between the two mirrored cowboys */
 #duel-word, #duel-word2 {
   position: absolute;
-  top: 26%;
+  top: 42%;
   left: 0; right: 0;
   font-weight: 300;
-  font-size: clamp(2.6rem, 10vw, 5rem);
+  font-size: clamp(2.4rem, 16cqw, 4.6rem);
   letter-spacing: 0.06em;
   pointer-events: none;
 }
@@ -158,58 +176,55 @@ header {
 @keyframes word-pop { from { transform: scale(0.6); opacity: 0; } }
 @keyframes bang-pop { from { transform: scale(1.9); opacity: 0.2; } }
 
-/* the upside-down word copy only exists for face-to-face portrait 2P */
+/* the upside-down word copy only exists for face-to-face 2P: the words
+   hug the centreline so each player reads them right-side-up */
 #duel-word2 { display: none; }
-@media (orientation: portrait) {
-  #screen-duel.twop #duel-word { top: 71%; transform-origin: center; }
-  #screen-duel.twop #duel-word2 {
-    display: block;
-    top: auto;
-    bottom: 71%;
-    transform: rotate(180deg);
-  }
-  /* keep the scoreboard away from the quit button on narrow screens */
-  #screen-duel.twop #duel-score { top: auto; bottom: 8px; font-size: 0.68rem; }
-  #screen-duel.twop #duel-word2.pop { animation: word-pop-flip 0.2s cubic-bezier(0.2, 1.5, 0.4, 1); }
-  #screen-duel.twop #duel-word2.bang.pop { animation: bang-pop-flip 0.16s ease-out; }
+#screen-duel.twop #duel-word { top: 51%; transform-origin: center; }
+#screen-duel.twop #duel-word2 {
+  display: block;
+  top: auto;
+  bottom: 51%;
+  transform: rotate(180deg);
 }
+#screen-duel.twop #duel-word2.pop { animation: word-pop-flip 0.2s cubic-bezier(0.2, 1.5, 0.4, 1); }
+#screen-duel.twop #duel-word2.bang.pop { animation: bang-pop-flip 0.16s ease-out; }
 @keyframes word-pop-flip { from { transform: rotate(180deg) scale(0.6); opacity: 0; } }
 @keyframes bang-pop-flip { from { transform: rotate(180deg) scale(1.9); opacity: 0.2; } }
 
+/* 1P: caption + times share the free band under the word;
+   2P: that band is taken by the mirrored word, so they drop to the
+   strip under your ground line */
 #duel-caption {
   position: absolute;
-  bottom: 17%;
-  left: 0; right: 0;
-  font-size: 0.85rem;
-  letter-spacing: 0.24em;
+  top: 54%;
+  left: 4%; right: 4%;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
   color: var(--ink);
+  line-height: 1.6;
   pointer-events: none;
 }
 #duel-times {
   position: absolute;
-  bottom: 12%;
+  top: 60%;
   left: 0; right: 0;
-  font-size: 0.8rem;
-  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
   color: var(--grey);
   pointer-events: none;
 }
-.quit { top: 14px; z-index: 3; position: absolute; }
+#screen-duel.twop #duel-caption { top: auto; bottom: 46px; font-size: 0.68rem; }
+#screen-duel.twop #duel-times { top: auto; bottom: 27px; }
+.quit { top: 12px; left: 6px; z-index: 3; position: absolute; }
 
-/* 2P tap-zone hints: only visible in two-player duels */
-#duel-zones { position: absolute; inset: 0; display: none; pointer-events: none; }
+/* 2P tap-zone hints: P1 owns the bottom half, P2 the (flipped) top */
+#duel-zones { position: absolute; inset: 0; display: none; flex-direction: column-reverse; pointer-events: none; }
 #screen-duel.twop #duel-zones { display: flex; }
-.zone { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3vh; }
+.zone { flex: 1; display: flex; justify-content: center; }
 .zone span { font-size: 0.7rem; letter-spacing: 0.3em; color: var(--faint); }
-.zone.p1 { border-right: 1px dashed var(--faint); }
-
-/* portrait: device flat between the players — P1 bottom, P2 top (flipped) */
-@media (orientation: portrait) {
-  #duel-zones { flex-direction: column-reverse; }
-  .zone.p1 { border-right: none; border-top: 1px dashed var(--faint); align-items: flex-end; padding-bottom: 5vh; }
-  .zone.p2 { align-items: flex-start; padding-top: 5vh; }
-  .zone.p2 span { transform: rotate(180deg); }
-}
+.zone.p1 { border-top: 1px dashed var(--faint); align-items: flex-end; padding-bottom: 4vh; }
+.zone.p2 { align-items: flex-start; padding-top: 4vh; }
+.zone.p2 span { transform: rotate(180deg); }
 
 @media (prefers-reduced-motion: reduce) {
   .screen.active, #duel-word.pop, #duel-word2.pop { animation: none; }
@@ -222,7 +237,7 @@ header {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px;
-  width: min(94vw, 720px);
+  width: 94%;
   max-height: 60vh;
   overflow-y: auto;
   padding: 4px;
