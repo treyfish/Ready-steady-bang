@@ -1,8 +1,10 @@
+# Alternative Pages deploy via Actions. The live site is currently served
+# the simple way — from the `gh-pages` branch (Settings → Pages shows it).
+# This workflow is kept for manual use if you switch Pages source to
+# "GitHub Actions"; it does nothing on ordinary pushes.
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [claude/ready-steady-bang-clone-d5u5dn]
   workflow_dispatch:
 
 permissions:
@@ -23,8 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

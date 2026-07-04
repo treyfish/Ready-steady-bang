@@ -29,9 +29,21 @@ static host over HTTPS (GitHub Pages, Vercel, Netlify...) and:
 - on Android: Chrome → menu → **Install app**
 
 It then launches fullscreen in portrait with its own icon and works with
-no connection. A GitHub Pages workflow is included
-(`.github/workflows/pages.yml`) — enable Pages (Settings → Pages → Source:
-GitHub Actions) and every push deploys automatically.
+no connection.
+
+**Live deployment:** the game is served by GitHub Pages from the
+`gh-pages` branch at https://treyfish.github.io/Ready-steady-bang/ .
+To ship an update, copy the game files onto that branch and push:
+
+```sh
+git worktree add /tmp/ghp gh-pages
+cp -r index.html css js icons manifest.webmanifest sw.js /tmp/ghp/
+cd /tmp/ghp && git add -A && git commit -m "deploy" && git push
+```
+
+(An Actions-based deploy workflow also exists in
+`.github/workflows/pages.yml` for manual dispatch if you switch the Pages
+source to "GitHub Actions".)
 
 ## How it plays (faithful to the original)
 
