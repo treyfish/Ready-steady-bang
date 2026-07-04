@@ -1,0 +1,68 @@
+# ready steady bang.
+
+A fan-made, personal-use clone of **Ready Steady Bang** — the 2011 minimalist
+quick-draw duelling game by Chambers Judd / Animade (published by Cowboy Games).
+All art, code and audio here are original and procedural; the mechanics and
+greyscale spirit follow the original as documented in press, store listings
+and gameplay footage.
+
+## Play
+
+No build step, no dependencies. Either open `index.html` directly, or serve
+the folder (needed on some browsers because the game uses ES modules):
+
+```sh
+python3 -m http.server 8000
+# then open http://localhost:8000
+```
+
+Works with mouse, touch, or keyboard (Space to draw in one-player; **A** vs
+**L** in two-player).
+
+## How it plays (faithful to the original)
+
+- A deadpan voice counts **ready… steady…** and then, after a *random* delay
+  (sometimes instantly, sometimes an agonising lull), **bang!**
+- Tap/click/press once to draw. First shot wins the duel.
+- Draw **before** the bang and you've false-started — the other cowboy calmly
+  guns you down.
+- **One player**: face 10 outlaws, each with a faster draw. Win **5 standoffs**
+  against an outlaw to take him down (and take his gun); he draws a little
+  faster after every kill you score. Losses never reset you — square up again.
+- **Two player**: one device laid flat, each player taps their own half
+  (sets of 1, 3 or 5 duels). False starts lose the duel.
+- Your draw time is shown in fractional seconds after every duel, alongside
+  your opponent's.
+- **31 unique cowboy deaths**, one unlocked per kill, replayable from the
+  **Kill Gallery**.
+- **Stats**: fastest draw, average draw, rank, wins/losses, false starts.
+  Progress persists in `localStorage`.
+
+## Structure
+
+```
+index.html      screens & layout
+css/style.css   greyscale minimal styling
+js/main.js      state machine, duel controller, menus, persistence
+js/data.js      opponents, timing constants, the 31 deaths
+js/cowboy.js    procedural cowboy silhouette renderer (canvas)
+js/deaths.js    the 31 procedural death animations + props
+js/audio.js     Web Audio synthesized SFX + speech-synthesis announcer
+```
+
+## Deliberate deviations from the original
+
+- Landscape side-view duel layout everywhere (the original ran portrait with
+  mirrored top/bottom cowboys on iPhone); tap zones split left/right in 2P.
+- The 10 outlaws use the original's real roster, recovered from its
+  achievement list (Sloe Jim, Arthur Rightus, The Doc, Van Queef, Aberdeen
+  Bangus, Bill, Thomas, Chaps, Texas, The Mystery Man — each dropping his
+  documented trophy). Their reaction times are tuned estimates; the real
+  values were never published.
+- Death animations are original inventions in the original's slapstick
+  spirit; the three documented ones (clutch-and-slump, 360° spin, stiff
+  backward flop) are included, and — as in the original — the 31st death
+  only unlocks when you beat the final outlaw.
+- Game Center / online leaderboards replaced by local stats and a rank table
+  whose bullet tiers mirror the original's bronze/silver/gold average-draw
+  achievements (<0.25s / <0.20s / <0.16s).

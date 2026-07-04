@@ -1,0 +1,212 @@
+/* ready steady bang — greyscale minimal, in the spirit of the original */
+
+:root {
+  --ink: #1c1c1c;
+  --paper: #f4f3f0;   /* warm off-white */
+  --grey: #8d8d8a;
+  --faint: #d8d7d3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Futura", "Century Gothic", "Avenir Next", "Trebuchet MS", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3vh;
+  padding: 24px;
+  text-align: center;
+}
+#screen-title { gap: 2.4vh; padding-bottom: 56px; }
+.screen.active { display: flex; }
+
+h1 {
+  font-weight: 300;
+  font-size: clamp(2.2rem, min(7vw, 9vh), 4.2rem);
+  line-height: 1.02;
+  letter-spacing: 0.04em;
+}
+
+h2 { font-weight: 300; font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: 0.05em; }
+
+.title-art svg { width: min(40vw, 220px); display: block; }
+
+button {
+  font: inherit;
+  font-weight: 400;
+  font-size: clamp(0.95rem, 2.2vh, 1.15rem);
+  letter-spacing: 0.14em;
+  color: var(--ink);
+  background: none;
+  border: none;
+  padding: clamp(4px, 1.1vh, 10px) 18px;
+  cursor: pointer;
+  transition: opacity 0.12s, transform 0.12s;
+}
+button:hover { transform: scale(1.06); }
+button:active { transform: scale(0.97); }
+button.minor { font-size: 0.8rem; color: var(--grey); letter-spacing: 0.2em; }
+
+.menu { display: flex; flex-direction: column; gap: 1.2vh; }
+
+.fineprint {
+  position: absolute;
+  bottom: 10px;
+  left: 0; right: 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: var(--grey);
+  line-height: 1.6;
+}
+
+header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+.back {
+  position: absolute;
+  left: 12px;
+  font-size: 0.95rem;
+  color: var(--grey);
+  letter-spacing: 0.1em;
+}
+.hint { color: var(--grey); font-size: 0.9rem; letter-spacing: 0.08em; line-height: 1.8; }
+
+/* --- opponent select ----------------------------------------------------- */
+
+#opponent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(92vw, 460px);
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.opponent {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--faint);
+  text-align: left;
+  letter-spacing: 0.1em;
+}
+.opponent:last-child { border-bottom: 1px solid var(--faint); }
+.opponent .num { color: var(--grey); font-size: 0.9rem; }
+.opponent .name { font-size: 1.05rem; }
+.opponent .tag { font-size: 0.65rem; color: var(--grey); letter-spacing: 0.18em; }
+.opponent.locked { opacity: 0.35; cursor: default; }
+.opponent.locked:hover { transform: none; }
+.opponent.beaten .name { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* --- duel ----------------------------------------------------------------- */
+
+#screen-duel { padding: 0; gap: 0; cursor: crosshair; }
+#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+#duel-score {
+  position: absolute;
+  top: 20px; left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  color: var(--grey);
+}
+#duel-score .vs { color: var(--faint); }
+
+#duel-word {
+  position: absolute;
+  top: 26%;
+  left: 0; right: 0;
+  font-weight: 300;
+  font-size: clamp(2.6rem, 10vw, 5rem);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+#duel-word.bang { font-weight: 500; }
+
+#duel-caption {
+  position: absolute;
+  bottom: 17%;
+  left: 0; right: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.24em;
+  color: var(--ink);
+  pointer-events: none;
+}
+#duel-times {
+  position: absolute;
+  bottom: 12%;
+  left: 0; right: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  color: var(--grey);
+  pointer-events: none;
+}
+.quit { top: 14px; z-index: 3; position: absolute; }
+
+/* 2P tap-zone hints: only visible in two-player duels */
+#duel-zones { position: absolute; inset: 0; display: none; pointer-events: none; }
+#duel-zones.two-player { display: flex; }
+.zone { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3vh; }
+.zone span { font-size: 0.7rem; letter-spacing: 0.3em; color: var(--faint); }
+.zone.p1 { border-right: 1px dashed var(--faint); }
+
+/* --- gallery -------------------------------------------------------------- */
+
+#gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  width: min(94vw, 720px);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px;
+}
+.kill {
+  border: 1px solid var(--faint);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  min-height: 92px;
+  justify-content: center;
+}
+.kill span { font-size: 0.72rem; letter-spacing: 0.16em; }
+.kill small { font-size: 0.6rem; color: var(--grey); line-height: 1.5; letter-spacing: 0.04em; }
+.kill.locked { color: var(--faint); cursor: default; font-size: 1.4rem; }
+.kill.locked:hover { transform: none; }
+
+/* --- stats ---------------------------------------------------------------- */
+
+#stats-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 200px));
+  gap: 26px 40px;
+}
+.stat { display: flex; flex-direction: column; gap: 6px; }
+.stat b { font-weight: 400; font-size: 1.5rem; letter-spacing: 0.06em; }
+.stat span { font-size: 0.62rem; letter-spacing: 0.24em; color: var(--grey); }
