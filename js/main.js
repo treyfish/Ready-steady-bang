@@ -910,5 +910,13 @@ setInterval(() => {
   if (gestured && activeScreen === 'screen-title') audio.whistle();
 }, 16000);
 
+// installable web app: register the offline service worker where supported
+// (silently skipped on file:// or sandboxed origins like the artifact host)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* not fatal */ });
+  });
+}
+
 resize();
 show('screen-title');
