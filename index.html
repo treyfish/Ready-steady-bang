@@ -12,30 +12,7 @@
 <!-- TITLE -->
 <section class="screen active" id="screen-title">
   <div class="title-art">
-    <svg viewBox="0 0 200 90" aria-hidden="true">
-      <!-- two tiny cowboys squaring up -->
-      <g fill="#1c1c1c">
-        <g transform="translate(45,70)">
-          <circle cx="0" cy="-26" r="6"/>
-          <ellipse cx="0" cy="-32" rx="11" ry="2"/>
-          <rect x="-5" y="-40" width="10" height="8" rx="3"/>
-          <rect x="-3" y="-22" width="6" height="16" rx="3"/>
-          <rect x="-4" y="-7" width="3" height="8" rx="1.5"/>
-          <rect x="1" y="-7" width="3" height="8" rx="1.5"/>
-          <rect x="0" y="-19" width="12" height="3" rx="1.5" transform="rotate(28)"/>
-        </g>
-        <g transform="translate(155,70) scale(-1,1)">
-          <circle cx="0" cy="-26" r="6"/>
-          <ellipse cx="0" cy="-32" rx="11" ry="2"/>
-          <rect x="-5" y="-40" width="10" height="8" rx="3"/>
-          <rect x="-3" y="-22" width="6" height="16" rx="3"/>
-          <rect x="-4" y="-7" width="3" height="8" rx="1.5"/>
-          <rect x="1" y="-7" width="3" height="8" rx="1.5"/>
-          <rect x="0" y="-19" width="12" height="3" rx="1.5" transform="rotate(28)"/>
-        </g>
-        <rect x="20" y="70" width="160" height="1.5"/>
-      </g>
-    </svg>
+    <canvas id="title-canvas" aria-hidden="true"></canvas>
   </div>
   <h1>ready<br>steady<br>bang.</h1>
   <nav class="menu">
@@ -72,6 +49,7 @@
   <div id="duel-zones"><div class="zone p1"><span>P1</span></div><div class="zone p2"><span>P2</span></div></div>
   <div id="duel-score"></div>
   <div id="duel-word"></div>
+  <div id="duel-word2" aria-hidden="true"></div>
   <div id="duel-caption"></div>
   <div id="duel-times"></div>
   <button id="btn-quit-duel" class="back quit">‹ quit</button>

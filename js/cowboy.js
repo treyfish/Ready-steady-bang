@@ -18,12 +18,15 @@ export function defaultPose() {
     armGun: 0.55,          // gun-arm angle: 0.55 rad down = holstered, 0 = level aim
     armOff: 0.5,           // off-arm hang angle
     legSplit: 0.16,        // stance width
+    footF: 0, footB: 0,    // per-foot x offsets (walk cycle)
     kneel: 0,              // 0..1 knees bend / body drop
+    breathe: 0,            // subtle torso rise (idle life)
     headTilt: 0,
     hatY: 0,               // hat offset (for hat-fly deaths)
     hatRot: 0,
     hatGone: false,
     gunGone: false,
+    gunDrawn: false,       // pistol stays in the holster until the draw
     flash: 0,              // muzzle flash intensity 0..1
     visible: true,
   };
@@ -45,24 +48,31 @@ export function drawCowboy(ctx, anchorX, anchorY, h, facing, pose) {
   ctx.lineJoin = 'round';
 
   const drop = pose.kneel * 16;        // body drops when kneeling
-  const hipY = -46 + drop;
-  const shoulderY = -74 + drop;
+  const hipY = -46 + drop - pose.breathe;
+  const shoulderY = -74 + drop - pose.breathe;
 
-  // Legs
-  ctx.lineWidth = 5.5;
+  // Legs (feet can slide for the walk cycle)
+  ctx.lineWidth = 6.5;
   const bend = pose.kneel * 10;
   ctx.beginPath(); // rear leg
-  ctx.moveTo(0 - pose.legSplit * 40, 0);
+  ctx.moveTo(-pose.legSplit * 40 + pose.footB, -Math.abs(pose.footB) * 0.18);
   ctx.lineTo(-2 - bend * 0.4, hipY + bend * 0.5);
-  ctx.moveTo(pose.legSplit * 40, 0); // front leg
+  ctx.moveTo(pose.legSplit * 40 + pose.footF, -Math.abs(pose.footF) * 0.18); // front leg
   ctx.lineTo(2 + bend * 0.4, hipY + bend * 0.5);
   ctx.stroke();
+
+  // holster on the front hip
+  ctx.save();
+  ctx.translate(7, hipY + 3);
+  ctx.rotate(0.12);
+  ctx.fillRect(-2.5, 0, 5.5, 10);
+  ctx.restore();
 
   // Torso (leans from the hip)
   ctx.save();
   ctx.translate(0, hipY);
   ctx.rotate(pose.lean);
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 10;
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(0, shoulderY - hipY);
@@ -71,7 +81,7 @@ export function drawCowboy(ctx, anchorX, anchorY, h, facing, pose) {
   const shY = shoulderY - hipY;
 
   // Off arm (far side) — slightly grey to read as behind
-  ctx.lineWidth = 4.5;
+  ctx.lineWidth = 5;
   ctx.save();
   ctx.translate(-1, shY + 4);
   ctx.rotate(Math.PI / 2 - pose.armOff * 0.35);
@@ -85,12 +95,12 @@ export function drawCowboy(ctx, anchorX, anchorY, h, facing, pose) {
   ctx.save();
   ctx.translate(1, shY + 5);
   ctx.rotate(pose.armGun);
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 5.5;
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(24, 0);
   ctx.stroke();
-  if (!pose.gunGone) {
+  if (!pose.gunGone && pose.gunDrawn) {
     // Pistol: L shape at the hand
     ctx.lineWidth = 4.5;
     ctx.beginPath();
@@ -126,7 +136,7 @@ export function drawCowboy(ctx, anchorX, anchorY, h, facing, pose) {
   ctx.beginPath(); ctx.moveTo(0, 2); ctx.lineTo(0, -3); ctx.stroke();
   // head
   ctx.beginPath();
-  ctx.arc(1, -10, 7.5, 0, Math.PI * 2);
+  ctx.arc(1, -10, 8, 0, Math.PI * 2);
   ctx.fill();
   // hat
   if (!pose.hatGone) {

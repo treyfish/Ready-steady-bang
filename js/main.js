@@ -31,12 +31,15 @@ function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 
 const $ = sel => document.querySelector(sel);
 const screens = document.querySelectorAll('.screen');
+let activeScreen = 'screen-title';
 
 function show(id) {
+  activeScreen = id;
   screens.forEach(s => s.classList.toggle('active', s.id === id));
   if (id === 'screen-select') buildSelect();
   if (id === 'screen-gallery') buildGallery();
   if (id === 'screen-stats') buildStats();
+  if (id === 'screen-title') titleStart();
 }
 
 function recordTime(ms) {
@@ -61,17 +64,26 @@ function resize() {
 window.addEventListener('resize', resize);
 
 // The scene: two cowboys + fx, drawn each frame while a duel or replay runs.
+const freshSide = () => ({
+  pose: defaultPose(), fx: [], death: null, deathStart: 0,
+  walk: null, dance: 0, fired: false, smoke: 0, hit: 0, seed: Math.random() * 7,
+});
+
 const scene = {
-  left:  { pose: defaultPose(), fx: [], death: null, deathStart: 0, walk: null },
-  right: { pose: defaultPose(), fx: [], death: null, deathStart: 0, walk: null },
+  left: freshSide(),
+  right: freshSide(),
   flash: 0,          // full-screen white flash 0..1
+  shake: 0,          // screen shake intensity
+  tension: false,    // hands hovering over holsters (ready/steady)
   running: false,
 };
 
 function resetScene() {
-  scene.left  = { pose: defaultPose(), fx: [], death: null, deathStart: 0, walk: null };
-  scene.right = { pose: defaultPose(), fx: [], death: null, deathStart: 0, walk: null };
+  scene.left = freshSide();
+  scene.right = freshSide();
   scene.flash = 0;
+  scene.shake = 0;
+  scene.tension = false;
 }
 
 function figureMetrics() {
@@ -83,33 +95,92 @@ function figureMetrics() {
   return { h, groundY, lx: inset, rx: W - inset };
 }
 
-function updateSide(side, now) {
-  const s = scene[side];
-  // walk-in
+// Puppet updater — works for any side object (duel scene or title diorama).
+function updatePuppet(s, now, tension) {
+  s.fx = [];
+
+  // walk-in: proper little step cycle — feet alternate, body bobs
   if (s.walk) {
     const t = Math.min(1, (now - s.walk.start) / s.walk.dur);
     s.pose.x = s.walk.from * (1 - t);
-    s.pose.legSplit = 0.16 + Math.sin(t * Math.PI * 8) * 0.12 * (t < 1 ? 1 : 0);
-    if (t >= 1) { s.walk = null; s.pose.x = 0; s.pose.legSplit = 0.16; }
+    const step = t * 7; // ~7 strides
+    s.pose.footF = Math.sin(step * Math.PI * 2) * 9;
+    s.pose.footB = -Math.sin(step * Math.PI * 2) * 9;
+    s.pose.y = -Math.abs(Math.sin(step * Math.PI * 2)) * 2.2;
+    s.pose.lean = 0.05;
+    s.pose.hatRot = Math.sin(step * Math.PI * 2) * 0.05;
+    if (t >= 1) {
+      s.walk = null;
+      s.pose.x = 0; s.pose.y = 0; s.pose.footF = 0; s.pose.footB = 0;
+      s.pose.lean = 0; s.pose.hatRot = 0;
+    }
+  } else if (!s.death && !s.dance) {
+    // idle life: slow breathing, and during ready/steady the gun hand
+    // hovers over the holster with a nervous tremor
+    s.pose.breathe = (Math.sin(now / 900 + s.seed) + 1) * 1.1;
+    if (!s.fired) {
+      if (tension) {
+        s.pose.armGun = 0.42 + Math.sin(now / 55 + s.seed) * 0.018;
+        s.pose.lean = 0.045;
+        s.pose.kneel = 0.08;
+      } else {
+        s.pose.armGun = 0.55;
+        s.pose.lean = 0;
+        s.pose.kneel = 0;
+      }
+    }
   }
-  // victory dance: a little hop, gun waved overhead
+
+  // hit reaction: a sharp jolt backwards the instant the bullet lands
+  if (s.hit) {
+    const u = (now - s.hit) / 160;
+    if (u < 1) s.pose.x = -10 * Math.sin(Math.min(1, u) * Math.PI);
+    else s.hit = 0;
+  }
+
+  // victory dance: hop, hat lifted high, gun waved overhead
   if (s.dance) {
     const t = (now - s.dance) / 1000;
-    s.pose.y = -Math.abs(Math.sin(t * 7)) * 10;
-    s.pose.armGun = -1.1 + Math.sin(t * 14) * 0.3;
+    s.pose.gunDrawn = true;
+    s.pose.y = -Math.abs(Math.sin(t * 7)) * 11;
+    s.pose.armGun = -1.15 + Math.sin(t * 14) * 0.3;
     s.pose.rot = Math.sin(t * 7) * 0.05;
+    s.pose.hatY = -6 - Math.abs(Math.sin(t * 7)) * 9;   // hat rides up with each hop
+    s.pose.hatRot = Math.sin(t * 9) * 0.25;
   }
-  // death animation
+
+  // muzzle smoke drifting up after a shot
+  if (s.smoke) {
+    const u = (now - s.smoke) / 1100;
+    if (u < 1) {
+      for (let i = 0; i < 3; i++) {
+        const p = Math.max(0, u - i * 0.12);
+        if (p > 0) s.fx.push({
+          type: 'smoke',
+          x: 41 + Math.sin(now / 300 + i * 2) * 3 + p * 6,
+          y: -76 - p * 30 - i * 4,
+          r: 3.5 + p * 8 + i * 1.5,
+          alpha: Math.max(0, 1 - p * 1.4),
+        });
+      }
+    } else s.smoke = 0;
+  }
+
+  // death animation (drawn last so it owns the pose)
   if (s.death) {
     const anim = DEATH_ANIMS[s.death];
     const t = Math.min(1, (now - s.deathStart) / anim.dur);
-    s.fx = [];
     anim.update(t, s.pose, s.fx);
   }
 }
 
 function render(now) {
   ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  if (scene.shake > 0.02) {
+    ctx.translate((Math.random() - 0.5) * 9 * scene.shake, (Math.random() - 0.5) * 7 * scene.shake);
+    scene.shake *= 0.86;
+  }
   const m = figureMetrics();
 
   // ground line
@@ -120,8 +191,8 @@ function render(now) {
   ctx.lineTo(W * 0.94, m.groundY + 1);
   ctx.stroke();
 
-  updateSide('left', now);
-  updateSide('right', now);
+  updatePuppet(scene.left, now, scene.tension);
+  updatePuppet(scene.right, now, scene.tension);
 
   for (const [side, x, facing] of [['left', m.lx, 1], ['right', m.rx, -1]]) {
     const s = scene[side];
@@ -139,6 +210,8 @@ function render(now) {
     ctx.restore();
     if (s.pose.clipGround) ctx.restore();
   }
+
+  ctx.restore(); // shake
 
   if (scene.flash > 0) {
     ctx.fillStyle = `rgba(255,255,255,${scene.flash})`;
@@ -163,16 +236,112 @@ function startLoop() {
 }
 function stopLoop() { scene.running = false; }
 
+// --- Title diorama ---------------------------------------------------------
+// The menu isn't a static picture: the two little cowboys live up there,
+// endlessly duelling. Every few seconds one of them draws; the loser gets
+// a random death from the full catalogue, dusts himself off, walks back in.
+
+const tCanvas = $('#title-canvas');
+const tctx = tCanvas ? tCanvas.getContext('2d') : null;
+const tScene = {
+  left: freshSide(), right: freshSide(),
+  phase: 'idle', at: 0, victim: null, running: false, tension: false,
+};
+
+function titleStart() {
+  if (!tctx || tScene.running) return;
+  tScene.running = true;
+  tScene.left = freshSide();
+  tScene.right = freshSide();
+  const now = performance.now();
+  tScene.left.walk = { start: now, dur: 1200, from: -170 };
+  tScene.right.walk = { start: now, dur: 1200, from: 170 };
+  tScene.phase = 'idle';
+  tScene.at = now + 2600 + Math.random() * 2400;
+  requestAnimationFrame(titleLoop);
+}
+
+function titleLoop(now) {
+  if (activeScreen !== 'screen-title') { tScene.running = false; return; }
+
+  // keep backing store in sync with layout size
+  const cw = tCanvas.clientWidth, ch = tCanvas.clientHeight;
+  if (tCanvas.width !== cw * DPR || tCanvas.height !== ch * DPR) {
+    tCanvas.width = cw * DPR; tCanvas.height = ch * DPR;
+  }
+  tctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  tctx.clearRect(0, 0, cw, ch);
+
+  // silent little duels on a loop
+  if (tScene.phase === 'idle' && now >= tScene.at) {
+    tScene.phase = 'tense';
+    tScene.tension = true;
+    tScene.at = now + 700 + Math.random() * 1300;
+  } else if (tScene.phase === 'tense' && now >= tScene.at) {
+    tScene.tension = false;
+    const shooterLeft = Math.random() < 0.5;
+    const shooter = shooterLeft ? tScene.left : tScene.right;
+    const victim = shooterLeft ? tScene.right : tScene.left;
+    fireArm(shooter, now);
+    setTimeout(() => {
+      victim.death = DEATHS[Math.floor(Math.random() * DEATHS.length)].id;
+      victim.deathStart = performance.now();
+    }, 200);
+    tScene.victim = shooterLeft ? 'right' : 'left';
+    tScene.phase = 'shot';
+    tScene.at = now + 3400;
+  } else if (tScene.phase === 'shot' && now >= tScene.at) {
+    // loser dusts himself off and walks back in; shooter reholsters
+    const vSide = tScene.victim;
+    tScene[vSide] = freshSide();
+    tScene[vSide].walk = { start: now, dur: 1200, from: vSide === 'left' ? -170 : 170 };
+    const shooter = tScene[vSide === 'left' ? 'right' : 'left'];
+    shooter.fired = false;
+    shooter.pose.armGun = 0.55;
+    tScene.phase = 'idle';
+    tScene.at = now + 2800 + Math.random() * 2600;
+  }
+
+  updatePuppet(tScene.left, now, tScene.tension);
+  updatePuppet(tScene.right, now, tScene.tension);
+
+  const groundY = ch * 0.82;
+  const h = ch * 0.52;
+  tctx.strokeStyle = '#1c1c1c';
+  tctx.lineWidth = 1.2;
+  tctx.beginPath();
+  tctx.moveTo(cw * 0.05, groundY + 1);
+  tctx.lineTo(cw * 0.95, groundY + 1);
+  tctx.stroke();
+
+  for (const [side, x, facing] of [['left', cw * 0.3, 1], ['right', cw * 0.7, -1]]) {
+    const s = tScene[side];
+    const sc = h / 100;
+    drawCowboy(tctx, x, groundY, h, facing, s.pose);
+    tctx.save();
+    tctx.translate(x, groundY);
+    tctx.scale(facing * sc, sc);
+    for (const p of s.fx) drawProp(tctx, p);
+    tctx.restore();
+  }
+
+  requestAnimationFrame(titleLoop);
+}
+
 // --- Word / caption overlay ----------------------------------------------
 
 const wordEl = $('#duel-word');
+const word2El = $('#duel-word2'); // upside-down copy for face-to-face 2P
 const capEl = $('#duel-caption');
 const timesEl = $('#duel-times');
 const scoreEl = $('#duel-score');
 
 function setWord(txt, cls = '') {
-  wordEl.textContent = txt;
-  wordEl.className = cls;
+  for (const el of [wordEl, word2El]) {
+    el.textContent = txt;
+    el.className = cls;
+    if (txt) { void el.offsetWidth; el.classList.add('pop'); } // retrigger pop
+  }
 }
 
 // --- Duel controller ------------------------------------------------------
@@ -260,6 +429,7 @@ class Duel {
       case 'pre':
         if (now >= this.at) {
           this.phase = 'ready';
+          scene.tension = true;      // hands drift over holsters
           setWord('ready.');
           audio.sayReady();
           this.at = now + TIMING.steadyGap;
@@ -276,6 +446,7 @@ class Duel {
       case 'steady':
         if (now >= this.at) {
           this.phase = 'bang';
+          scene.tension = false;
           setWord('bang!', 'bang');
           audio.sayBang();
           this.bangAt = now;
@@ -330,7 +501,9 @@ class Duel {
 
   falseStart(side, now) {
     audio.ricochet();
+    scene.tension = false;
     scene.flash = 0.5;
+    scene.shake = 0.6;
     const shooterSide = side === 0 ? 'left' : 'right';
     fireArm(scene[shooterSide], now);
     if (side === 0) { save.falseStarts++; persist(); }
@@ -360,14 +533,19 @@ class Duel {
       const t = performance.now();
       audio.gunshot();
       scene.flash = 0.35;
+      scene.shake = 1;
       fireArm(winnerSide === 0 ? scene.left : scene.right, t);
       const humanKill = winnerSide === 0 || this.mode === '2p';
       const death = pickDeath(humanKill);
       const victim = loserSide === 0 ? scene.left : scene.right;
       setTimeout(() => {
-        victim.death = death.id;
-        victim.deathStart = performance.now();
-      }, TIMING.deathPause);
+        victim.hit = performance.now();       // bullet jolt...
+        setTimeout(() => {                    // ...then he goes down
+          victim.death = death.id;
+          victim.deathStart = performance.now();
+          setTimeout(() => audio.thud(), DEATH_ANIMS[death.id].dur * 0.72);
+        }, 120);
+      }, TIMING.deathPause - 120);
       this.newDeath = death.isNew ? death : null;
       this.finishRound(winnerSide, falseStart);
     }, delay);
@@ -426,14 +604,31 @@ class Duel {
   }
 }
 
-// quick draw-arm animation for the shooter
+// the draw: whip the arm level (fast), muzzle flash, recoil kick, settle
 function fireArm(side, start) {
+  side.fired = true;
+  side.pose.gunDrawn = true;   // out of the holster
   const animate = () => {
-    const t = Math.min(1, (performance.now() - start) / 90);
-    side.pose.armGun = 0.55 * (1 - t);
-    side.pose.flash = t >= 1 ? 1 : 0;
-    if (t < 1) requestAnimationFrame(animate);
-    else setTimeout(() => { side.pose.flash = 0; }, 130);
+    const t = performance.now() - start;
+    if (t < 70) {                       // whip up
+      side.pose.armGun = 0.55 * (1 - t / 70);
+    } else if (t < 120) {               // flash frame
+      side.pose.armGun = 0;
+      side.pose.flash = 1;
+      side.pose.lean = -0.05;           // recoil rocks him back
+    } else if (t < 300) {               // kick up and settle
+      const u = (t - 120) / 180;
+      side.pose.flash = Math.max(0, 1 - u * 2.5);
+      side.pose.armGun = -0.3 * Math.sin(u * Math.PI);
+      side.pose.lean = -0.05 * (1 - u);
+    } else {
+      side.pose.armGun = 0;
+      side.pose.flash = 0;
+      side.pose.lean = 0;
+      side.smoke = performance.now();   // smoke curls from the barrel
+      return;
+    }
+    requestAnimationFrame(animate);
   };
   animate();
 }
@@ -461,13 +656,13 @@ function showEndScreen(d, playerWon) {
 
 function startDuel1P(opp) {
   show('screen-duel');
-  $('#duel-zones').classList.remove('two-player');
+  $('#screen-duel').classList.remove('twop');
   duel = new Duel({ mode: '1p', opponent: opp, winsNeeded: KILLS_TO_BEAT });
 }
 
 function startDuel2P(bestOf) {
   show('screen-duel');
-  $('#duel-zones').classList.add('two-player');
+  $('#screen-duel').classList.add('twop');
   duel = new Duel({ mode: '2p', winsNeeded: Math.ceil(bestOf / 2) });
 }
 
@@ -477,8 +672,19 @@ function duelPointer(e) {
   if (!duel) return;
   audio.unlock();
   const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - rect.left;
-  const side = duel.mode === '2p' ? (x < rect.width / 2 ? 0 : 1) : 0;
+  let side = 0;
+  if (duel.mode === '2p') {
+    // landscape: P1 left / P2 right. Portrait (device flat between two
+    // players, like the original): P1 bottom / P2 top.
+    const portrait = rect.height > rect.width;
+    if (portrait) {
+      const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - rect.top;
+      side = y > rect.height / 2 ? 0 : 1;
+    } else {
+      const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - rect.left;
+      side = x < rect.width / 2 ? 0 : 1;
+    }
+  }
   duel.input(side, performance.now());
 }
 $('#screen-duel').addEventListener('pointerdown', e => {
@@ -532,7 +738,7 @@ function buildGallery() {
 // Gallery replay: victim stands alone mid-screen and dies on loop once.
 function replayDeath(id) {
   show('screen-duel');
-  $('#duel-zones').classList.remove('two-player');
+  $('#screen-duel').classList.remove('twop');
   duel = null;
   resetScene();
   scene.left.pose.visible = false;
@@ -586,11 +792,12 @@ $('#btn-reset').onclick = () => {
   }
 };
 
-// title screen whistle, once, after first interaction is available
-let whistled = false;
-document.addEventListener('pointerdown', () => {
-  if (!whistled) { whistled = true; audio.unlock(); }
-}, { once: true });
+// lonely whistle ambience on the title screen (audio needs a first gesture)
+let gestured = false;
+document.addEventListener('pointerdown', () => { gestured = true; audio.unlock(); }, { once: true });
+setInterval(() => {
+  if (gestured && activeScreen === 'screen-title') audio.whistle();
+}, 16000);
 
 resize();
 show('screen-title');

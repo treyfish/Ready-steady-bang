@@ -102,6 +102,34 @@ export function ricochet() {
   osc.stop(t + 0.55);
 }
 
+// Dull body-hits-the-dirt thud.
+export function thud() {
+  if (muted) return;
+  const c = ac();
+  const t = c.currentTime;
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(95, t);
+  osc.frequency.exponentialRampToValueAtTime(38, t + 0.13);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.5, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+  osc.connect(g).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.18);
+  // a little dirt scatter
+  const len = Math.floor(c.sampleRate * 0.08);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.3;
+  const n = c.createBufferSource();
+  n.buffer = buf;
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 700;
+  n.connect(lp).connect(c.destination);
+  n.start(t + 0.01);
+}
+
 // Soft UI tick for menu taps.
 export function tick() {
   if (muted) return;

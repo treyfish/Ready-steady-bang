@@ -6,6 +6,11 @@
 const clamp01 = t => Math.max(0, Math.min(1, t));
 // progress within sub-segment [a,b] of t
 const seg = (t, a, b) => clamp01((t - a) / (b - a));
+// a puff of ground dust when a body lands, starting at time fraction `at`
+function landDust(t, at, fx, x = 0) {
+  const u = seg(t, at, at + 0.3);
+  if (u > 0 && u < 1) fx.push({ type: 'dust', x, y: 0, r: 8 + 22 * u, alpha: 0.8 * (1 - u) });
+}
 const easeIn = t => t * t;
 const easeOut = t => 1 - (1 - t) * (1 - t);
 const easeInCubic = t => t * t * t;
@@ -13,26 +18,30 @@ const HPI = Math.PI / 2;
 
 // Each entry: { dur: ms, update(t, p, fx) }
 export const DEATH_ANIMS = {
-  'stiff-back': { dur: 900, update(t, p) {
+  'stiff-back': { dur: 900, update(t, p, fx) {
     p.rot = -HPI * easeIn(seg(t, 0.1, 0.75));
     if (t > 0.75) p.rot = -HPI + Math.sin(seg(t, 0.75, 1) * Math.PI) * 0.06;
+    landDust(t, 0.75, fx, -50);
   }},
 
-  'stiff-front': { dur: 900, update(t, p) {
+  'stiff-front': { dur: 900, update(t, p, fx) {
     p.rot = HPI * easeIn(seg(t, 0.1, 0.75));
     if (t > 0.75) p.rot = HPI - Math.sin(seg(t, 0.75, 1) * Math.PI) * 0.06;
+    landDust(t, 0.75, fx, 50);
   }},
 
-  'knees-first': { dur: 1400, update(t, p) {
+  'knees-first': { dur: 1400, update(t, p, fx) {
     p.kneel = easeOut(seg(t, 0, 0.35));
     p.lean = 0.15 * seg(t, 0.2, 0.4);
     p.rot = HPI * easeIn(seg(t, 0.5, 0.9));
+    landDust(t, 0.9, fx, 40);
   }},
 
-  'spin-360': { dur: 1300, update(t, p) {
+  'spin-360': { dur: 1300, update(t, p, fx) {
     const spin = seg(t, 0, 0.55);
     p.scaleX = Math.cos(spin * Math.PI * 2) || 0.02; // one full pirouette
     p.rot = -HPI * easeIn(seg(t, 0.55, 0.95));
+    landDust(t, 0.95, fx, -50);
   }},
 
   'hat-clutch': { dur: 1600, update(t, p) {
@@ -49,12 +58,13 @@ export const DEATH_ANIMS = {
     p.rot = -HPI * easeIn(seg(t, 0.65, 0.95));
   }},
 
-  'launch-up': { dur: 1100, update(t, p) {
+  'launch-up': { dur: 1100, update(t, p, fx) {
     const u = seg(t, 0.02, 0.85);
     p.y = -(140 * Math.sin(u * Math.PI)) * (1 - u * 0.3);
     p.x = -70 * u;
     p.rot = -Math.PI * easeOut(u);
     if (t > 0.85) { p.y = 0; p.rot = -HPI; }
+    landDust(t, 0.85, fx, -70);
   }},
 
   'coffin': { dur: 1500, update(t, p, fx) {
@@ -103,11 +113,12 @@ export const DEATH_ANIMS = {
     p.headTilt = 0.5 * seg(t, 0.4, 0.7);
   }},
 
-  'backflip': { dur: 1300, update(t, p) {
+  'backflip': { dur: 1300, update(t, p, fx) {
     const u = seg(t, 0.05, 0.8);
     p.y = -110 * Math.sin(u * Math.PI);
     p.rot = -2 * Math.PI * easeOut(u);
     if (t > 0.8) p.rot = -HPI;   // sticks the landing... flat
+    landDust(t, 0.8, fx, -50);
   }},
 
   'melt': { dur: 1800, update(t, p, fx) {
@@ -372,6 +383,12 @@ export function drawProp(ctx, prop) {
     case 'spark':
       ctx.beginPath();
       ctx.arc(0, 0, 3.5 + (prop.i % 3), 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case 'smoke':
+      ctx.globalAlpha *= 0.35;
+      ctx.beginPath();
+      ctx.arc(0, 0, prop.r || 5, 0, Math.PI * 2);
       ctx.fill();
       break;
     case 'star': {
