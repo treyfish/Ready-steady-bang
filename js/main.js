@@ -481,20 +481,14 @@ class Duel {
   }
 
   updateScoreboard() {
+    // race to 5: both tallies count, whoever fills their pips first wins
     const pips = n => '●'.repeat(n) + '○'.repeat(Math.max(0, this.winsNeeded - n));
-    if (this.mode === '1p') {
-      // your kill tally toward the 5 needed; the outlaw can't "win" the
-      // series — he can only keep gunning you down
-      scoreEl.innerHTML =
-        `<span>YOU ${pips(this.score[0])}</span>` +
-        `<span class="vs">VS</span>` +
-        `<span>${this.opp.name.toUpperCase()}${this.score[1] ? ` (SHOT YOU ×${this.score[1]})` : ''}</span>`;
-    } else {
-      scoreEl.innerHTML =
-        `<span>PLAYER 1 ${pips(this.score[0])}</span>` +
-        `<span class="vs">VS</span>` +
-        `<span>${pips(this.score[1]).split('').reverse().join('')} PLAYER 2</span>`;
-    }
+    const name0 = this.mode === '1p' ? 'YOU' : 'PLAYER 1';
+    const name1 = this.mode === '1p' ? this.opp.name.toUpperCase() : 'PLAYER 2';
+    scoreEl.innerHTML =
+      `<span>${name0} ${pips(this.score[0])}</span>` +
+      `<span class="vs">VS</span>` +
+      `<span>${pips(this.score[1]).split('').reverse().join('')} ${name1}</span>`;
   }
 
   nextRound(now, first = false) {
@@ -562,11 +556,9 @@ class Duel {
         break;
       case 'result':
         if (now >= this.at) {
-          // 1P: only YOUR kills count toward taking the outlaw — he can't
-          // win the series, you just keep squaring up until you have 5
-          const over = this.mode === '1p'
-            ? this.score[0] >= this.winsNeeded
-            : this.score[0] >= this.winsNeeded || this.score[1] >= this.winsNeeded;
+          // first to 5 kills takes the series — the outlaw's kills count
+          // against you too, so he can absolutely beat you to it
+          const over = this.score[0] >= this.winsNeeded || this.score[1] >= this.winsNeeded;
           if (over) this.end();
           else this.nextRound(now);
         }
@@ -681,14 +673,14 @@ class Duel {
 
   end() {
     this.phase = 'idle';
-    const playerWon = this.mode === '1p' ? true : this.score[0] > this.score[1];
-    if (this.mode === '1p' && !save.beaten.includes(this.opp.id)) {
+    const playerWon = this.score[0] > this.score[1];
+    if (this.mode === '1p' && playerWon && !save.beaten.includes(this.opp.id)) {
       save.beaten.push(this.opp.id);
       save.unlocked = Math.max(save.unlocked, Math.min(this.opp.id + 1, OPPONENTS.length));
       persist();
     }
     // winner celebrates with one of the victory dances before the curtain
-    const winnerSide = this.mode === '1p' || playerWon ? 'left' : 'right';
+    const winnerSide = playerWon ? 'left' : 'right';
     scene[winnerSide].flourish = 0;
     scene[winnerSide].dance = {
       start: performance.now(),
@@ -739,13 +731,20 @@ function showEndScreen(d, playerWon) {
   const sub = $('#end-sub');
   if (d.mode === '1p') {
     const last = d.opp.id === OPPONENTS.length;
-    el.textContent = last ? 'THE FASTEST GUN IN THE WEST' : `${d.opp.name.toUpperCase()} IS DOWN`;
-    sub.textContent = `you took ${d.opp.trophy}.` + (last ? ' the final kill is yours in the gallery.' : '');
-    $('#end-rematch').textContent = last ? 'RIDE AGAIN' : 'NEXT COWBOY';
-    $('#end-rematch').onclick = () => {
-      const target = !last ? OPPONENTS.find(o => o.id === d.opp.id + 1) : OPPONENTS[0];
-      startDuel1P(target);
-    };
+    if (playerWon) {
+      el.textContent = last ? 'THE FASTEST GUN IN THE WEST' : `${d.opp.name.toUpperCase()} IS DOWN`;
+      sub.textContent = `you took ${d.opp.trophy}.` + (last ? ' the final kill is yours in the gallery.' : '');
+      $('#end-rematch').textContent = last ? 'RIDE AGAIN' : 'NEXT COWBOY';
+      $('#end-rematch').onclick = () => {
+        const target = !last ? OPPONENTS.find(o => o.id === d.opp.id + 1) : OPPONENTS[0];
+        startDuel1P(target);
+      };
+    } else {
+      el.textContent = `${d.opp.name.toUpperCase()} GUNNED YOU DOWN`;
+      sub.textContent = `${d.score[1]} — ${d.score[0]}. he keeps ${d.opp.trophy}.`;
+      $('#end-rematch').textContent = 'REMATCH';
+      $('#end-rematch').onclick = () => startDuel1P(d.opp);
+    }
   } else {
     el.textContent = playerWon ? 'PLAYER 1 WINS' : 'PLAYER 2 WINS';
     sub.textContent = `${d.score[0]} — ${d.score[1]}`;

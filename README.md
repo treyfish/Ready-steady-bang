@@ -52,9 +52,10 @@ source to "GitHub Actions".)
 - Tap/click/press once to draw. First shot wins the duel.
 - Draw **before** the bang and you've false-started — the other cowboy calmly
   guns you down.
-- **One player**: face 10 outlaws, each with a faster draw. Win **5 standoffs**
-  against an outlaw to take him down (and take his gun); he draws a little
-  faster after every kill you score. Losses never reset you — square up again.
+- **One player**: face 10 outlaws, each with a faster draw. Each series is a
+  **race to 5 kills** — take the outlaw down 5 times and his trophy is yours,
+  but if he guns you down 5 times first, you lose the series and have to
+  rematch. He also draws a little faster after every kill you score on him.
 - **Two player**: one device laid flat, each player taps their own half
   (sets of 1, 3 or 5 duels). False starts lose the duel.
 - Your draw time is shown in fractional seconds after every duel, alongside
