@@ -1,7 +1,8 @@
-// Audio: synthesized with Web Audio API — no asset files needed.
-// The original uses a muted robotic voice for "ready / steady / bang",
-// a dry gunshot, and sparse western ambience. We approximate all of it
-// procedurally so the clone is fully self-contained.
+// Audio: synthesized with Web Audio API, plus three tiny embedded voice
+// clips for the announcer. The original uses a muted robotic voice for
+// "ready / steady / bang", a dry gunshot, and sparse western ambience.
+
+import { VOICE } from './voice.js';
 
 let ctx = null;
 let muted = false;
@@ -15,25 +16,59 @@ function ac() {
 export function setMuted(m) { muted = m; }
 export function isMuted() { return muted; }
 
-// Unlock audio on first user gesture (mobile requirement).
-export function unlock() { ac(); }
+// Unlock audio on first user gesture (mobile requirement) and start
+// decoding the announcer clips.
+export function unlock() { ac(); loadVoice(); }
 
 // --- The voice ---------------------------------------------------------
-// A flat, lo-fi robotic voice. Prefer SpeechSynthesis (matches the
-// original's deadpan robot delivery); fall back to nothing (words are
-// always shown on screen anyway).
-function speak(word, { rate = 0.95, pitch = 0.55, volume = 0.9 } = {}) {
+// Embedded espeak-generated clips (deadpan robot, like the original),
+// decoded once into AudioBuffers. Browser speech synthesis is only a
+// fallback if decoding somehow fails — the words are always shown on
+// screen regardless.
+const voiceBuffers = {};
+let voiceLoading = false;
+
+function b64ToArrayBuffer(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function loadVoice() {
+  if (voiceLoading) return;
+  voiceLoading = true;
+  const c = ac();
+  for (const word of Object.keys(VOICE)) {
+    // decodeAudioData detaches the buffer, so give each call its own copy
+    c.decodeAudioData(b64ToArrayBuffer(VOICE[word]))
+      .then(buf => { voiceBuffers[word] = buf; })
+      .catch(() => { /* fall back to speech synthesis */ });
+  }
+}
+
+function speak(word, { volume = 1, rate = 1 } = {}) {
   if (muted) return;
+  const c = ac();
+  const buf = voiceBuffers[word];
+  if (buf) {
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    const g = c.createGain();
+    g.gain.value = volume;
+    src.connect(g).connect(c.destination);
+    src.start();
+    return;
+  }
+  loadVoice();
+  // fallback: browser speech synthesis
   try {
     if (!('speechSynthesis' in window)) return;
     const u = new SpeechSynthesisUtterance(word);
-    u.rate = rate;
-    u.pitch = pitch;   // low pitch = deadpan robot
+    u.rate = 0.95;
+    u.pitch = 0.55;
     u.volume = volume;
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => /en[-_](US|GB)/i.test(v.lang) && /male|daniel|alex|david/i.test(v.name))
-      || voices.find(v => /^en/i.test(v.lang));
-    if (preferred) u.voice = preferred;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch { /* voice is optional */ }
@@ -41,7 +76,7 @@ function speak(word, { rate = 0.95, pitch = 0.55, volume = 0.9 } = {}) {
 
 export function sayReady()  { speak('ready'); }
 export function saySteady() { speak('steady'); }
-export function sayBang()   { speak('bang', { rate: 1.1, volume: 1 }); }
+export function sayBang()   { speak('bang', { volume: 0.85, rate: 1.06 }); } // the famous muted bang
 
 // --- SFX ----------------------------------------------------------------
 

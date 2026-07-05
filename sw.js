@@ -1,6 +1,6 @@
 // Offline-first service worker: precache the whole game (it's tiny),
 // serve from cache, refresh the cache in the background.
-const CACHE = 'rsb-v3';
+const CACHE = 'rsb-v4';
 const ASSETS = [
   '.',
   'index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   'js/cowboy.js',
   'js/deaths.js',
   'js/audio.js',
+  'js/voice.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',
