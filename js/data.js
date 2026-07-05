@@ -52,8 +52,8 @@ export const OPPONENTS = [
 // a series (the original's "victory dance").
 export const DANCES = ['hat-wave', 'gun-twirl', 'heel-click', 'jig', 'bow'];
 
-// Beat an outlaw by winning this many standoffs against him (losses don't
-// reset your tally — you just square up again).
+// A series is a race to this many kills — first to reach it wins,
+// and the outlaw's kills count against you too.
 export const KILLS_TO_BEAT = 5;
 // How much faster the outlaw gets per standoff you've already won (fraction of mean).
 export const OPPONENT_RAMP = 0.035;
